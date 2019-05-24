@@ -279,7 +279,9 @@ log_event()
                 *Proxy\ started.*)
                     kill -3 $TPID 
                     echo
-                    echo "P2P tunnel connected on port $port." 
+                    if [ $VERBOSE -gt 0 ]; then
+                        echo "P2P tunnel connected on port $port." 
+                    fi
                     return 0
                 ;;
                 *usage:*)
@@ -630,7 +632,7 @@ connect_to_it()
             ssh -i "$pemkey" "${user}127.0.0.1" -p$port
         fi
     else
-        echo "$1 P2P tunnel now open on 127.0.0.1 -p$port"
+        echo "$1 P2P tunnel now open on 127.0.0.1:$port"
         echo "Press the Enter key to terminate this P2P connection."
         read anykey
     fi
