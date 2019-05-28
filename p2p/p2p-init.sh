@@ -1,12 +1,26 @@
 #!/bin/bash
 #
-#  SSH/VNC/http(s) wrapper and working example for remote.it P2P Connections
+#  Connection wrapper and working example for remote.it P2P Connections
 #  connectd is run in P2P initiator mode
+#
+#----------------------------
+# To list services in your account:
+#
+# ./p2p-init.sh <-v> <-v> -l <-p protocol>
+# Adding -p protocol to the command line where protocol is one of:
+# ssh
+# http
+# vnc
+# tcp
+# rdp
+#
+# will restrict the listing to only Services which match that protocol.
+# http should be used for both http and https Services.
 #
 #----------------------------
 # for SSH:
 #
-# ./p2p-init.sh <-v> <-v> -p ssh <user@>ssh_servicename
+# ./p2p-init.sh <-v> <-v> <user@>ssh_servicename
 #
 #  ssh_servicename is the name of the remote.it Service for your ssh connection
 #
@@ -14,15 +28,9 @@
 #  When you exit/logout from the ssh session, the P2P connection will terminate automatically.
 #
 #----------------------------
-# for VNC:
+# for all other protocols:
 #
-# ./p2p-init.sh <-v> <-v> -p vnc servicename
-# The P2P connection will terminate when you press the Enter key.
-#
-#----------------------------
-# for http/https:
-#
-# ./p2p-init.sh <-v> <-v> -p http servicename
+# ./p2p-init.sh <-v> <-v> servicename
 # The P2P connection will terminate when you press the Enter key.
 #
 #----------------------------
@@ -76,6 +84,9 @@ authtype=0
 # using the authhash for connectd P2P initiator mode is faster than using password
 USE_AUTHHASH=1
 #
+# serviceType is set to "ALL" by default for listing services.
+# You can add <-p protocol> to narrow the search results to only those that match protocol.
+serviceType=ALL
 #
 apiMethod="https://"
 apiVersion="/apv/v27"
@@ -124,7 +135,7 @@ This demo script is suitable for managing a small list (up to 25) of devices.
 It has been tested on Ubuntu and Raspbian.  At the moment it is not compatible with macOS.
 
 ------------------------------------------
-This software allows you to make ssh, vnc, or http/https connections to your remote.it enabled servers.
+This software allows you to make Peer to peer (P2P) connections to your remote.it enabled servers.
 
 Your username and authhash will be stored in ~/.remoteit/auth.  In the event of a "102] login failure" error, delete this file and try again.
 
@@ -132,17 +143,25 @@ To get a list of all services associated with your account, use:
 
 ./p2p-init.sh -l -p [protocol]
 
-where [protocol] is one of: ssh, vnc, http
+where [protocol] is one of: ssh, vnc, http, tcp, or rdp
+If you leave off <-p protocol> then all services registered to your account are shown.
 
 To make an ssh P2P connection, use:
 
-./p2p-init.sh -p ssh username@device-name
+./p2p-init.sh username@service-name
 
-username is the ssh login name of the device.  For Raspberry Pi Raspbian OS, this is usually "pi".  Other embedded OSes often use "root".
+username is the ssh login name of the device.  For Raspberry Pi Raspbian OS, this is usually "pi".  
+Other embedded OSes often use "root".
 
-device-name is the remote.it name you gave to this device's SSH connection.
+service-name is the remote.it name you gave to this device's SSH Service.
 
-If your device name has spaces in it, surround "username@device name" with quotes.
+If your Service name has spaces in it, surround "username@service name" with quotes.
+
+To make a connection to any protocol other than ssh, use:
+
+./p2p-init.sh service-name
+
+If your Service name has spaces in it, surround "service-name" with quotes.
 
 Verbose output
 
@@ -211,11 +230,12 @@ printf "\n%s\n\n\n" "$man_text"
 usage()
 {
         echo "Version $VERSION Build $MODIFIED" >&2
-        echo "Usage: $0 [-v (verbose)] [-v (maximum verbosity)] [-l(ist services only)] [-c(leanup)] [-r(eset to default)] [-m(an page)] [-i (use PEM key for SSH login)] [-h (this message)] -p protocol [user@]<devicename> [passed on to ssh]" >&2
+        echo "Usage: $0 [-v (verbose)] [-v (maximum verbosity)] [-l(ist services only)] [-c(leanup)] [-r(eset to default)] [-m(an page)] [-i (use PEM key for SSH login)] [-h (this message)] [-p protocol] [user@]<servicename> [passed on to ssh]" >&2
         echo "[items in brackets are optional] " >&2
-        echo "You must specify the protocol and device name." >&2
-        echo "protocol should be ssh, vnc, or http." >&2
-        echo "-i and user@ are only used with -p ssh" >&2
+        echo "You must specify the service name." >&2
+        echo "In listing mode (-l), you can optionally specify the protocol to show only matching services".
+        echo "protocol should be ssh, vnc, tcp, rdp, or http." >&2
+        echo "-i and user@ are only used with connections to ssh Services" >&2
         exit 1 
 }
 
@@ -597,9 +617,13 @@ display_services()
         sType="$1"
     fi
     echo
-    echo "Available $sType Services"
+    if [ "$sType" == "ALL" ]; then
+        echo "All available remote.it Services"
+    else
+        echo "Available $sType Services"
+    fi
     echo
-    printf "%-30s | %-15s |  %-10s \n" "Service Name" "Service Type" "Service State"
+    printf "%-40s | %-15s |  %-10s \n" "Service Name" "Service Type" "Service State"
     echo "--------------------------------------------------------------"
     # loop through the device array and match the device name
     for i in "${service_array[@]}"
@@ -608,8 +632,10 @@ display_services()
         service_name=$(jsonval "$i" "devicealias")
         service_state=$(jsonval "$i" "devicestate")
         service_service=$(jsonval "$i" "servicetitle")
-        if [ "$service_service" == "$1" ]; then
-            printf "%-30s | %-15s |  %-10s \n" $service_name $sType $service_state
+        if [ "$sType" == "ALL" ]; then
+            printf "%-40s | %-15s |  %-10s \n" $service_name $service_service $service_state
+        elif [ "$service_service" == "$1" ]; then
+            printf "%-40s | %-15s |  %-10s \n" $service_name $sType $service_state
         fi
      done
     echo
@@ -780,6 +806,10 @@ while getopts i:p:lvhmcr OPT; do
             continue
         elif [ "$serviceType" == "VNC" ]; then
             continue
+        elif [ "$serviceType" == "TCP" ]; then
+            continue
+        elif [ "$serviceType" == "RDP" ]; then
+            continue
         else
             usage
             exit 0
@@ -893,6 +923,10 @@ else
         if [ "$serviceType" == "HTTP" ]; then
             display_services "HTTP"
             display_services "Secure Web" "HTTPS"
+        elif [ "$serviceType" == "RDP" ]; then
+            display_services "RDP Plus" "RDP"
+        elif [ "$serviceType" == "TCP" ]; then
+            display_services "Generic TCP" "TCP"
         else
             display_services "${serviceType}"
         fi
@@ -955,7 +989,8 @@ if [  -e $REMOTEIT_DIR/$port.active ]; then
     if [ $VERBOSE -gt 0 ]; then
         printf "Port ${port} is already active, connecting to existing tunnel.\n"
     fi
-    connect_to_it "$serviceType"
+    # make serviceType upper case
+    connect_to_it "${serviceType^^}"
     #
     echo "done"
 
