@@ -41,18 +41,14 @@ For example. supposing your SSH service is called "My SSH Service" and the login
 When you log out of your ssh session, the P2P connection will be terminated.
 
 -----------
-To make a connection to an VNC or http(s) Service, use:
+To make a connection to anything other than SSH, use:
 
-VNC:
-./p2p-init.sh -p vnc service-name
-
-http(s):
-./p2p-init.sh -p http service-name
+./p2p-init.sh service-name
 
 service-name is the name you gave to this device's vnc or http(s) remote.it Service.
 If your service name has spaces in it, surround "service-name" with quotes, e.g.
 
-./p2p-init.sh -p vnc "My VNC Service".
+./p2p-init.sh "My VNC Service".
 
 The P2P connection will remain open until you press the Enter key.  This allows you to use the
 localhost:port connection in your web browser or VNC application.  When you are done using the 
@@ -65,7 +61,7 @@ To get more information about the internal operation of the script, use one or t
 
 ./p2p-init.sh -v -p ssh username@service-name
 
-./p2p-init.sh -v -v -p http service-name
+./p2p-init.sh -v -v service-name
 
 -----------
 Clearing the cache

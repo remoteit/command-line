@@ -18,19 +18,24 @@
 # http should be used for both http and https Services.
 #
 #----------------------------
-# for SSH:
+# To make a P2P connection to an SSH Service:
 #
 # ./p2p-init.sh <-v> <-v> <user@>ssh_servicename
 #
 #  ssh_servicename is the name of the remote.it Service for your ssh connection
 #
 #  if <user@> is not added, the current username will be used for ssh login on the remote system.
+#
+#  The P2P connection will start, the IP address and port will be automatically sent to the 
+#  ssh command.  You may see some security warning messages initially, then proceed to ssh login.
+#
 #  When you exit/logout from the ssh session, the P2P connection will terminate automatically.
 #
 #----------------------------
-# for all other protocols:
+# To make a P2P connection to all other protocols:
 #
 # ./p2p-init.sh <-v> <-v> servicename
+# The P2P connection will start and display the IP address and port to use.
 # The P2P connection will terminate when you press the Enter key.
 #
 #----------------------------
@@ -105,6 +110,7 @@ AHASH=""
 # Other Globals
 #
 SERVICE_ADDRESS=""
+SERVICE_PROTOCOL=""
 SERVICE_STATE=""
 LIST_ONLY=0
 VERBOSE=0
@@ -137,9 +143,10 @@ It has been tested on Ubuntu and Raspbian.  At the moment it is not compatible w
 ------------------------------------------
 This software allows you to make Peer to peer (P2P) connections to your remote.it enabled servers.
 
-Your username and authhash will be stored in ~/.remoteit/auth.  In the event of a "102] login failure" error, delete this file and try again.
+Your username and authhash will be stored in ~/.remoteit/auth.  In the event of a "102] login failure" error, 
+delete this file (use the -r option with p2p-init.sh) and try again.
 
-To get a list of all services associated with your account, use:
+To get a list of services associated with your account, use:
 
 ./p2p-init.sh -l -p [protocol]
 
@@ -150,7 +157,8 @@ To make an ssh P2P connection, use:
 
 ./p2p-init.sh username@service-name
 
-username is the ssh login name of the device.  For Raspberry Pi Raspbian OS, this is usually "pi".  
+username is the ssh login name of the device.  
+For Raspberry Pi Raspbian OS, this is usually "pi".  
 Other embedded OSes often use "root".
 
 service-name is the remote.it name you gave to this device's SSH Service.
@@ -343,19 +351,12 @@ log_event()
 userLogin () #Portal login function
 {
     printf "Logging in...\n"
-#    echo "loginURLpw=$loginURLpw"
-#    echo "username=$username"
-#    echo "password=$password"
-#    echo 
     
     if [ $authtype -eq 1 ]; then
-#        resp=$(curl -s -S -X GET -H "content-type:application/json" -H "apikey:${apikey}" "$loginURLhash/$username/$ahash")
         resp=$(curl -s -S -X POST -H "apikey: ${apikey}" -H "Content-Type: application/json" -H "Cache-Control: no-cache" -d "{ \"username\" : \"$username\", \"authhash\" : \"$ahash\" }" "$loginURLhash")
     else
         resp=$(curl -s -S -X POST -H "apikey: ${apikey}" -H "Content-Type: application/json" -H "Cache-Control: no-cache" -d "{ \"username\" : \"$username\", \"password\" : \"$password\" }" "$loginURLpw")
     fi
-
-#    echo "resp=$resp"
 
     status=$(jsonval "$(echo -n "$resp")" "status")
 
@@ -374,7 +375,6 @@ userLogin () #Portal login function
         date +"%s" > ~/.remoteit/.remot3it_lastlogin
         # get auth hash
         ahash=$(jsonval "$resp" "service_authhash")
-#        echo "Got authhash >>$ahash"
         ret=1
     else
         loginerror=$(jsonval "$(echo -n "$resp")" "reason") 
@@ -385,6 +385,37 @@ userLogin () #Portal login function
 }
  
 ######### End Portal Login #########
+
+######### Ask Function #########
+ask()
+{
+    echo
+    while true; do
+	if [ "${2:-}" = "Y" ]; then
+	    prompt="Y/n"
+	    default=Y
+	elif [ "${2:-}" = "N" ]; then
+	    prompt="y/N"
+	    default=N
+	else
+	    prompt="y/n"
+	    default=
+	fi
+	# Ask the question
+        echo "$1 [$prompt] "
+	read REPLY
+	# Default?
+	if [ -z "$REPLY" ]; then
+	    REPLY=$default
+	fi
+	# Check if the reply is valid
+	case "$REPLY" in
+	    Y*|y*) return 0 ;;
+	    N*|n*) return 1 ;;
+	esac
+    done
+}
+######### End Ask Function #########
 
 ######### Service List ########
 deviceList()
@@ -399,13 +430,15 @@ deviceList()
 #
 cleanup_files()
 {
-    if [ $VERBOSE -gt 0 ]; then
-        printf "Cleaning up remote.it runtime files.  Removing auth file and active files.\n"
-    fi   
-    # reset auth
-    rm -f $AUTH
-    # reset active files
-    rm -f ${REMOTEIT_DIR}/*.active
+    if ask "Are you sure you want to reset your login and active devices?" ; then
+        # reset auth
+        rm -f $AUTH
+        # reset active files
+        rm -f ${REMOTEIT_DIR}/*.active
+        if [ $VERBOSE -gt 0 ]; then
+            printf "Cleaning up remote.it runtime files.  Removing auth file and active files.\n"
+        fi   
+    fi
 }
 #
 # Delete all the stuff in ~\.remoteit to reset to default.  You may have to clean up your .ssh/known_hosts
@@ -413,10 +446,12 @@ cleanup_files()
 #
 resetToDefault()
 {
-    if [ $VERBOSE -gt 0 ]; then
-        printf "Resetting remote.it settings to default.\n"
-    fi   
-    rm -f ${REMOTEIT_DIR}/*
+    if ask "Are you sure you want to reset all P2P related settings?" ; then
+        rm -f ${REMOTEIT_DIR}/*
+        if [ $VERBOSE -gt 0 ]; then
+           printf "Resetting all remote.it settings to default.\n"
+        fi   
+    fi
 }
 
 
@@ -516,17 +551,9 @@ check_auth_cache()
         # Auth file exists, lets get it
         read -r line < "$AUTH"
         # Parse
-#        username=${line%%"|"*}
         username=$(echo $line | awk -F"|" '{print $1 }')
-# echo "username: $username"
-#        password=${line##*"|"}
         password=$(echo $line | awk -F"|" '{print $3 }')
-# echo "password: $password"
-#        t=${line#*"|"}
-#echo "t: $t"
         authtype=$(echo $line | awk -F"|" '{print $2 }')
-#        authtype=${t%%"|"*}
-# echo "authtype: $authtype"
         if [ $authtype -eq 1 ]; then
             ahash=$password
         fi
@@ -549,8 +576,10 @@ checkServiceCache()
         #found grab port
         p=${dev_info%%"|"*}
         port=${p##*"TPORT"}
-        #Get address SERVICE_ADDRESS
-        SERVICE_ADDRESS=${dev_info##*"|"}
+        # Get address SERVICE_ADDRESS
+        SERVICE_ADDRESS=$(echo "$dev_info" | awk -F"|" '{ print $3 }')
+        # Get SERVICE_PROTOCOL
+        SERVICE_PROTOCOL=$(echo "$dev_info" | awk -F"|" '{ print $4 }')
         return 1
     fi
     return 0
@@ -564,11 +593,7 @@ checkServiceCache()
 parse_device()
 {
     #parse services data into lines, this old code is not MacOS mach compatible
-    #lines=$(echo "$1" | sed  's/},{/}\n{/g' )
-    #lines=$(echo "$in" | sed  's/},{/}\'$'\n''{/g' )
-    #lines=$(echo "$1" | sed  's/},{/}|{/g' )
     #parse lines into array 
-    #readarray -t service_array < <( echo "$lines" )
     # mac friendly replacement
     #service_array=( $(echo $lines | cut -d $'\n' -f1) )
     lines=$(echo "$1" | sed  's/},{/}|{/g' )
@@ -586,22 +611,18 @@ match_device()
     # loop through the device array and match the device name
     for i in "${service_array[@]}"
     do
-        # do whatever on $i
-        #service_name=$(jsonval "$(echo -n "$i")" "devicealias") 
+        # do iteration on $i (device list)
         service_name=$(jsonval "$i" "devicealias") 
    
         if [ "$service_name" = "$1" ]; then
             # Match echo out the UID/address
-            #service_address=$(jsonval "$(echo -n "$i")" "deviceaddress")
             SERVICE_ADDRESS=$(jsonval "$i" "deviceaddress")
+            SERVICE_PROTOCOL=$(jsonval "$i" "servicetitle")
             SERVICE_STATE=$(jsonval "$i" "devicestate")
-            #echo -n "$SERVICE_ADDRESS"
             return 1
         fi
     done
 
-    #fail
-    #echo -n "Not found"
     return 0
 }
 
@@ -624,7 +645,7 @@ display_services()
     fi
     echo
     printf "%-40s | %-15s |  %-10s \n" "Service Name" "Service Type" "Service State"
-    echo "--------------------------------------------------------------"
+    echo "------------------------------------------------------------------------------"
     # loop through the device array and match the device name
     for i in "${service_array[@]}"
     do
@@ -632,10 +653,20 @@ display_services()
         service_name=$(jsonval "$i" "devicealias")
         service_state=$(jsonval "$i" "devicestate")
         service_service=$(jsonval "$i" "servicetitle")
+        service_uid=$(jsonval "$i" "deviceaddress")
+
         if [ "$sType" == "ALL" ]; then
-            printf "%-40s | %-15s |  %-10s \n" $service_name $service_service $service_state
+            printf "%-40s | %-15s |  %-10s" $service_name $service_service $service_state
+            if [ $VERBOSE -gt 0 ]; then
+                printf "%s" $service_uid
+            fi
+            printf "\n"
         elif [ "$service_service" == "$1" ]; then
-            printf "%-40s | %-15s |  %-10s \n" $service_name $sType $service_state
+            printf "%-40s | %-15s |  %-10s" $service_name $sType $service_state
+            if [ $VERBOSE -gt 0 ]; then
+                printf "%s" $service_uid
+            fi
+            printf "\n"
         fi
      done
     echo
@@ -644,6 +675,10 @@ display_services()
 connect_to_it()
 {
     #
+    if [ $VERBOSE -gt 0 ]; then
+        echo "Connecting to $1..."
+    fi
+
     if [ "$1" == "SSH" ]; then
         printf "Starting SSH connection...\n"
         if [ "$pemkey" == "" ]; then
@@ -665,44 +700,6 @@ connect_to_it()
 
 }
 #===================================================================
-
-#produces a unix timestamp to the output                                                                                           
-utime()                                                                                                                            
-{                                                                                                                                  
-    echo $(date +%s)                                                                                                               
-} 
-#
-# Produce a sortable timestamp that is year/month/day/timeofday
-#
-timestamp()
-{
-    echo $(date +%Y%m%d%H%M%S)
-}
-
-
-#
-# Simple Long Random
-#
-srand()
-{
-    echo "$RANDOM$RANDOM" 
-}
-
-#
-# dev_random() - produces a crypto secure random number string ($1 digits) to the output (supports upto 50 digits for now)
-#
-# ret=dev_random(10)
-#
-dev_random()                                                                                                                        
-{                                                                                                                                  
-    local count=$1                                                                                                                 
-    if [ "$count" -lt 1 ] || [ "$count" -ge 50 ]; then                           
-        count=50;                                                                  
-    fi                                                                             
-    ret=$(cat /dev/urandom | tr -cd '0-9' | dd bs=$count count= 2>/dev/null)
-    echo -n "$ret"                                 
-} 
-
 #                                                                                                                                  
 # JSON parse (very simplistic):  get value frome key $2 in buffer $1,  values or keys must not have the characters {}[", 
 #   and the key must not have : in it
@@ -717,61 +714,8 @@ jsonval()
     echo ${temp}                                                
 }                                                   
 
-#                                                                                                
-# rem_spaces $1  - replace space with underscore (_)                                                  
-#
-rem_spaces()                                                                  
-{
-    echo "$@" | sed -e 's/ /_/g'                                                         
-}      
-
-#                                                                                                
-# rem_spaces $1  - replace space with underscore (^)                                                  
-#
-spaces2pipe()                                                                  
-{
-    echo "$@" | sed -e 's/ /^/g'                                                         
-}   
-
-#                                                                                                
-# rem_spaces $1  - replace ^ with space ( )                                                  
-#
-pipe2space()                                                                  
-{
-    echo "$@" | sed -e 's/^/ /g'                                                         
-}                
-                                               
-#                   
-# urlencode $1
-#                                      
-urlencode()                                                                           
-{
-#STR="$1"
-STR="$@"          
-[ "${STR}x" == "x" ] && { STR="$(cat -)"; }
-                     
-echo ${STR} | sed -e 's| |%20|g' \
--e 's|!|%21|g' \
--e 's|#|%23|g' \
--e 's|\$|%24|g' \
--e 's|%|%25|g' \
--e 's|&|%26|g' \
--e "s|'|%27|g" \
--e 's|(|%28|g' \
--e 's|)|%29|g' \
--e 's|*|%2A|g' \
--e 's|+|%2B|g' \
--e 's|,|%2C|g' \
--e 's|/|%2F|g' \
--e 's|:|%3A|g' \
--e 's|;|%3B|g' \
--e 's|=|%3D|g' \
--e 's|?|%3F|g' \
--e 's|@|%40|g' \
--e 's|\[|%5B|g' \
--e 's|]|%5D|g'
-
-}    
+                                              
+  
 
 ###############################
 # Main program starts here    #
@@ -875,7 +819,7 @@ checkServiceCache
 if [ $? = 1 ] && [ "$LIST_ONLY" -eq 0 ]; then
     # device found in cache, 
     if [ $VERBOSE -gt 0 ]; then
-        printf "Found ${device} in cache with UID of ${SERVICE_ADDRESS} and port ${port}.  Trying fast connect, assuming credentials are valid and device is active.\n"
+        printf "Found ${device} in cache with UID of ${SERVICE_ADDRESS} and port ${port}.\nTrying fast connect, assuming credentials are valid and device is active.\n"
         #force device state as active, this may cause problems if not active
     fi
     SERVICE_STATE="active"
@@ -955,7 +899,7 @@ else
         # else get next port
         port=$(next_port)
         #append to file
-        echo "TPORT${port}|${device}|${SERVICE_ADDRESS}" >> $ENDPOINTS
+        echo "TPORT${port}|${device}|${SERVICE_ADDRESS}|${SERVICE_PROTOCOL}|" >> $ENDPOINTS
     fi
 fi
 
@@ -968,6 +912,7 @@ base_username=$(echo -n "$username" | base64)
 if [ $VERBOSE -gt 0 ]; then
     echo "Service $device address is $SERVICE_ADDRESS"
     echo "Service is $SERVICE_STATE"
+    echo "Protocol is $SERVICE_PROTOCOL"
     echo "base64 username is $base_username"
     echo "Connection will be to 127.0.0.1:$port"
 fi
@@ -990,7 +935,7 @@ if [  -e $REMOTEIT_DIR/$port.active ]; then
         printf "Port ${port} is already active, connecting to existing tunnel.\n"
     fi
     # make serviceType upper case
-    connect_to_it "${serviceType^^}"
+    connect_to_it "${SERVICE_PROTOCOL^^}"
     #
     echo "done"
 
@@ -1016,7 +961,6 @@ else
     #
     if [ $authtype -eq 1 ]; then
         # make the connection
-        #$EXE -p "$base_username" "$ahash" "$address" "T$port" 2 127.0.0.1 0.0.0.0 15 0 0 > $CONNECTION_LOG &
         if [ $VERBOSE -gt 1 ]; then
             echo "Issuing command: $EXE -p $base_username $ahash $SERVICE_ADDRESS T$port 2 127.0.0.1 0.0.0.0 15 0 0 > $CONNECTION_LOG &"
         fi
@@ -1055,7 +999,7 @@ else
 
     #
     #
-    connect_to_it "$serviceType"
+    connect_to_it "$SERVICE_PROTOCOL"
 
     echo "Done"
     
