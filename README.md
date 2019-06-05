@@ -1,6 +1,7 @@
 # command-line
 remote.it utilities useful in terminal based environments
 
+------------------------------------------
 ## p2p-init.sh: remote.it Peer to Peer (P2P) initiator sample script.
 Demonstrates use of the remote.it connectd daemon on your Linux client to create a peer to peer 
 connection to a remote.it Service.
