@@ -12,8 +12,9 @@ It has been tested on Ubuntu and Raspbian.  At the moment it is not compatible w
 Your username and authhash will be stored in ~/.remoteit/auth.  In the event of a "102] login failure" error, delete this file and try again.
 
 ### To show the built in help pages, type:
-
+```
 ./p2p-init.sh -m | less
+```
 
 ### To get a list of the various services associated with your account, use:
 
