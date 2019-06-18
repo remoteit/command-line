@@ -899,7 +899,7 @@ if [  -e $REMOTEIT_DIR/$port.active ]; then
         printf "Port ${port} is already active, connecting to existing tunnel.\n"
     fi
     # make serviceType upper case
-    connect_to_it "${SERVICE_PROTOCOL^^}"
+    connect_to_it "$(echo ${SERVICE_PROTOCOL} | awk '{ print toupper($0) }')"
     #
     echo "done"
 
