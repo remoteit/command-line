@@ -707,7 +707,7 @@ while getopts i:p:lvhmcr OPT; do
         ;;
       p)
         # convert input protocol string to upper case
-        serviceType=${OPTARG^^}
+	serviceType=$(echo ${OPTARG} | awk '{ print toupper($0) }')
         if [ "$serviceType" == "SSH" ]; then
             continue
         elif [ "$serviceType" == "HTTP" ]; then
