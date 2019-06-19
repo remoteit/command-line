@@ -32,9 +32,14 @@ VNC:
 ```
 ./p2p-init.sh -p vnc -l 
 ```
+
+All:
+```
+./p2p-init.sh -l 
+```
 ### To make a connection to an SSH service then log in, use:
 ```
-./p2p-init.sh -p ssh username@service-name
+./p2p-init.sh username@service-name
 ```
 
 username is the ssh login name of the device.  For Raspberry Pi Raspbian OS, this is usually "pi".  
@@ -46,7 +51,7 @@ If your service name has spaces in it, surround "username@device name" with quot
 
 For example. supposing your SSH service is called "My SSH Service" and the login username is pi, use:
 ```
-./p2p-init.sh -p ssh "pi@My SSH Service".
+./p2p-init.sh "pi@My SSH Service".
 ```
 When you log out of your ssh session, the P2P connection will be terminated.
 
