@@ -40,7 +40,7 @@ http/https:
 ```
 
 VNC:
-```
+```shell
 ./p2p-init.sh -p vnc -l 
 ```
 
