@@ -45,7 +45,7 @@ VNC:
 ```
 
 All:
-```
+```shell
 ./p2p-init.sh -l 
 ```
 ### To make a connection to an SSH service then log in, use:
