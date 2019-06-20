@@ -1,13 +1,24 @@
 # command-line
 remote.it utilities useful in terminal based environments
 
-------------------------------------------
+\------------------------------------------
 ## p2p-init.sh: remote.it Peer to Peer (P2P) initiator sample script.
 Demonstrates use of the remote.it connectd daemon on your Linux client to create a peer to peer 
 connection to a remote.it Service.
 This demo script is suitable for managing a small list (up to 25) of devices.
-It has been tested on Ubuntu and Raspbian.  At the moment it is not compatible with macOS.
+It has been tested on Ubuntu, Raspbian, and macOS Mojave.
 
+\------------------------------------------
+### Prerequisite:
+Linux: make sure you have the connectd package installed first.  See: https://docs.remote.it/platforms/supported-platforms
+Mac: as we don't have a Mac package at this time, run the following commands in a terminal window to get the Mac version of the connectd daemon onto your system and create a symbolic link for the p2p-init.sh script to use:
+
+```shell
+cd /usr/local/bin
+curl -LkO https://github.com/remoteit/connectd/releases/download/v4.6/connectd.x86_64-osx
+chmod +x connectd.x86_64-osx
+ln -s /usr/local/bin/connectd.x86_64-osx connectd
+```
 ------------------------------------------
 Your username and authhash will be stored in ~/.remoteit/auth.  In the event of a "102] login failure" error, delete this file and try again.
 
@@ -29,12 +40,17 @@ http/https:
 ```
 
 VNC:
-```
+```shell
 ./p2p-init.sh -p vnc -l 
 ```
-### To make a connection to an SSH service then log in, use:
+
+All:
+```shell
+./p2p-init.sh -l 
 ```
-./p2p-init.sh -p ssh username@service-name
+### To make a connection to an SSH service then log in, use:
+```shell
+./p2p-init.sh username@service-name
 ```
 
 username is the ssh login name of the device.  For Raspberry Pi Raspbian OS, this is usually "pi".  
@@ -45,8 +61,8 @@ service-name is the name you gave to this device's SSH remote.it Service.
 If your service name has spaces in it, surround "username@device name" with quotes.
 
 For example. supposing your SSH service is called "My SSH Service" and the login username is pi, use:
-```
-./p2p-init.sh -p ssh "pi@My SSH Service".
+```shell
+./p2p-init.sh "pi@My SSH Service".
 ```
 When you log out of your ssh session, the P2P connection will be terminated.
 
