@@ -6,8 +6,18 @@ remote.it utilities useful in terminal based environments
 Demonstrates use of the remote.it connectd daemon on your Linux client to create a peer to peer 
 connection to a remote.it Service.
 This demo script is suitable for managing a small list (up to 25) of devices.
-It has been tested on Ubuntu and Raspbian.  At the moment it is not compatible with macOS.
+It has been tested on Ubuntu, Raspbian, and macOS Mojave.
+------------------------------------------
+### Prerequisite:
+Linux: make sure you have the connectd package installed first.  See: https://docs.remote.it/platforms/supported-platforms
+Mac: as we don't have a Mac package at this time, run the following commands in a terminal window to get the Mac version of the connectd daemon onto your system and create a symbolic link for the p2p-init.sh script to use:
 
+'''
+cd /usr/local/bin
+curl -LkO https://github.com/remoteit/connectd/releases/download/v4.6/connectd.x86_64-osx
+chmod +x connectd.x86_64-osx
+ln -s /usr/local/bin/connectd.x86_64-osx connectd
+'''
 ------------------------------------------
 Your username and authhash will be stored in ~/.remoteit/auth.  In the event of a "102] login failure" error, delete this file and try again.
 
