@@ -13,7 +13,7 @@ It has been tested on Ubuntu, Raspbian, and macOS Mojave.
 Linux: make sure you have the connectd package installed first.  See: https://docs.remote.it/platforms/supported-platforms
 Mac: as we don't have a Mac package at this time, run the following commands in a terminal window to get the Mac version of the connectd daemon onto your system and create a symbolic link for the p2p-init.sh script to use:
 
-```
+```shell
 cd /usr/local/bin
 curl -LkO https://github.com/remoteit/connectd/releases/download/v4.6/connectd.x86_64-osx
 chmod +x connectd.x86_64-osx
