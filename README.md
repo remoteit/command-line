@@ -61,7 +61,7 @@ service-name is the name you gave to this device's SSH remote.it Service.
 If your service name has spaces in it, surround "username@device name" with quotes.
 
 For example. supposing your SSH service is called "My SSH Service" and the login username is pi, use:
-```
+```shell
 ./p2p-init.sh "pi@My SSH Service".
 ```
 When you log out of your ssh session, the P2P connection will be terminated.
