@@ -49,7 +49,7 @@ All:
 ./p2p-init.sh -l 
 ```
 ### To make a connection to an SSH service then log in, use:
-```
+```shell
 ./p2p-init.sh username@service-name
 ```
 
