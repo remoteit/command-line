@@ -7,6 +7,7 @@ Demonstrates use of the remote.it connectd daemon on your Linux client to create
 connection to a remote.it Service.
 This demo script is suitable for managing a small list (up to 25) of devices.
 It has been tested on Ubuntu, Raspbian, and macOS Mojave.
+
 \------------------------------------------
 ### Prerequisite:
 Linux: make sure you have the connectd package installed first.  See: https://docs.remote.it/platforms/supported-platforms
